@@ -18,7 +18,6 @@ public class IDealDirectoryRequest extends IDealMessage {
     public static IDealDirectoryRequest create(Configuration conf) {
         try {
             Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
-            doc.setXmlStandalone(true);
 
             Element root = doc.createElement("DirectoryReq");
             root.setAttribute("xmlns", "http://www.idealdesk.com/ideal/messages/mer-acq/3.3.1");
