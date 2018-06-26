@@ -1,12 +1,17 @@
 package foundation.privacybydesign.ideal.common;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.io.StringWriter;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Collections;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.crypto.MarshalException;
@@ -18,6 +23,8 @@ import javax.xml.crypto.dsig.keyinfo.KeyInfoFactory;
 import javax.xml.crypto.dsig.keyinfo.KeyName;
 import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -25,6 +32,8 @@ import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 public class IDealMessage {
     protected Document doc;
@@ -37,6 +46,44 @@ public class IDealMessage {
     // The private key is the key to sign with, and the certificate is used to
     // generate a fingerprint (must be part of the message).
     public void sign(PrivateKey sk, X509Certificate cert) {
+        // Sanity check.
+        BigInteger pubkey1 = ((RSAPrivateCrtKey)sk).getPublicExponent();
+        BigInteger pubkey2 = ((RSAPublicKey)cert.getPublicKey()).getPublicExponent();
+        if (!pubkey1.equals(pubkey2)) {
+            throw new IllegalArgumentException("private key and certificate do not have a matching public key, make sure the certificate belongs to this private key");
+        }
+
+        // Transform the document to a different version of itself (that is
+        // semantically equivalent in our case).
+        // Why? Because the iDeal message canonicalization method includes
+        // whitespace for some reason.
+        try {
+            // First serialize the document using correct whitespace transforms.
+            String docstring;
+            try {
+                TransformerFactory tf = TransformerFactory.newInstance();
+                Transformer t = tf.newTransformer();
+                t.setOutputProperty(OutputKeys.INDENT, "yes");
+                t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+                StringWriter writer = new StringWriter();
+                t.transform(new DOMSource(doc), new StreamResult(writer));
+                docstring = writer.getBuffer().toString();
+            } catch (TransformerException e) {
+                throw new RuntimeException("unexpected XML transformer exception");
+            }
+
+            // Then parse it again.
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            // String -> reader: https://stackoverflow.com/a/562207/559350
+            doc = factory.newDocumentBuilder().parse(new InputSource(new StringReader(docstring)));
+            doc.setXmlStandalone(true);
+        } catch (ParserConfigurationException | SAXException | IOException e) {
+            // This should never happen. We just created this XML so it has to
+            // be valid.
+            throw new RuntimeException("could not parse just-serialized XML?");
+        }
+
         // Source:
         // http://www.oracle.com/technetwork/articles/javase/dig-signature-api-140772.html
         try {
@@ -133,12 +180,15 @@ public class IDealMessage {
     }
 
     // Output the request XML as a string.
+    // Note: the iDeal endpoint (at least Volksbank) appears to be really picky
+    // about whitespace.
+    // The signed data *must* contain whitespace (see the sign method), while
+    // the signature itself *must not* contain whitespace.
+    // I don't know who came up with this great idea...
     public String toString() {
         try {
             TransformerFactory tf = TransformerFactory.newInstance();
             Transformer t = tf.newTransformer();
-            t.setOutputProperty(OutputKeys.INDENT, "yes");
-            t.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
             StringWriter writer = new StringWriter();
             t.transform(new DOMSource(doc), new StreamResult(writer));
             return writer.getBuffer().toString();
