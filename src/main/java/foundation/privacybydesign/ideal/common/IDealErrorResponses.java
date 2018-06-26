@@ -11,11 +11,11 @@ public class IDealErrorResponses extends IDealResponse {
 
     // Get a specific error from the "Error" element.
     private String getError(String tagName) {
-        NodeList errorList = doc.getElementsByTagName("Error");
+        NodeList errorList = doc.getElementsByTagNameNS("*", "Error");
         if (errorList.getLength() == 0) return null;
         Element error = (Element)errorList.item(0);
 
-        NodeList errorPartList = error.getElementsByTagName(tagName);
+        NodeList errorPartList = error.getElementsByTagNameNS("*", tagName);
         if (errorPartList.getLength() == 0) return null;
         Element errorPart = (Element)errorPartList.item(0);
         return errorPart.getTextContent();

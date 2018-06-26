@@ -124,7 +124,7 @@ public class IDealMessage {
         // http://www.oracle.com/technetwork/articles/javase/dig-signature-api-140772.html
         try {
             // Find Signature element.
-            NodeList nl = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+            NodeList nl = doc.getElementsByTagName("Signature");
             if (nl.getLength() == 0) {
                 throw new IDealValidationException("cannot find Signature element");
             }
@@ -150,7 +150,7 @@ public class IDealMessage {
             // Check whether the certificate fingerprint matches the signing
             // fingerprint.
             if (!keyName.getTextContent().equals(getFingerprint(cert))) {
-                throw new IDealValidationException("invalid fingerprint in KeyName");
+                throw new IDealValidationException("invalid fingerprint in KeyName: " + keyName.getTextContent() + " (expecting " + getFingerprint(cert) + ")");
             }
 
             // Verify the signature!

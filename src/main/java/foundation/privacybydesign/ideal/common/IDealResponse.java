@@ -16,8 +16,10 @@ public class IDealResponse extends IDealMessage {
     public static IDealResponse get(InputStream stream)
             throws IOException, SAXException {
         try {
-            Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(stream);
-            String name = doc.getDocumentElement().getTagName();
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            Document doc = factory.newDocumentBuilder().parse(stream);
+            String name = doc.getDocumentElement().getLocalName();
             if (name.equals("AcquirerErrorRes")) {
                 return new IDealErrorResponses(doc);
             } else {
