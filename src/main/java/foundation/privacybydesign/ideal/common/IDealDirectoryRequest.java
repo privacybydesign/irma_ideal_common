@@ -43,11 +43,11 @@ public class IDealDirectoryRequest extends IDealMessage {
                 merchantId = "0" + merchantId;
             }
 
-            Element merchantIdElement = doc.createElement("merchantId");
+            Element merchantIdElement = doc.createElement("merchantID");
             merchantIdElement.setTextContent(merchantId);
             merchant.appendChild(merchantIdElement);
 
-            Element subIdElement = doc.createElement("subId");
+            Element subIdElement = doc.createElement("subID");
             subIdElement.setTextContent(conf.getMerchantSubId());
             merchant.appendChild(subIdElement);
 
